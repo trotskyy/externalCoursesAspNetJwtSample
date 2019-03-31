@@ -17,11 +17,13 @@ namespace AspNetIdentityAuthSample.Controllers
         }
 
         // GET api/values/5
+        [Authorize(Roles = "Admin")]
         public string Get(int id)
         {
             return "value";
         }
 
+        [Authorize(Roles = "Admin")]
         // POST api/values
         public void Post([FromBody]string value)
         {

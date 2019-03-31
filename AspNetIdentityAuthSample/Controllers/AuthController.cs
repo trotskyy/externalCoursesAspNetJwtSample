@@ -54,7 +54,7 @@ namespace AspNetIdentityAuthSample.Controllers
 
         [Route("sign-up")]
         [HttpPost]
-        public async Task<IHttpActionResult> SignUp(SignUpModel signUpModel)
+        public async Task<IHttpActionResult> SignUp([FromBody]SignUpModel signUpModel, [FromUri] bool addAsAdmin)
         {
             if (!ModelState.IsValid)
             {
@@ -67,6 +67,19 @@ namespace AspNetIdentityAuthSample.Controllers
             if (!result.Succeeded)
             {
                 return BadRequest(result.Errors.Aggregate((agg, msg) => agg += "; " + msg));
+            }
+
+            // for demo purposes only! in real world scenarios such users should be created only by super admin e.g.
+            if (addAsAdmin)
+            {
+                // roles should be extracted into some enum e.g.
+                IdentityResult addToRoleResult = await UserManager.AddToRoleAsync(newUser.Id, "Admin");
+
+                if (!addToRoleResult.Succeeded)
+                {
+                    // actually we should roll back all changes and give user meaningfull output
+                    return BadRequest();
+                }
             }
 
             // create user in Domain DB
