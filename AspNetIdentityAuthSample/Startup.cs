@@ -16,6 +16,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Claims;
+using System.Web.Configuration;
 
 namespace AspNetIdentityAuthSample
 { 
@@ -37,11 +38,15 @@ namespace AspNetIdentityAuthSample
 
             app.UseCors(CorsOptions.AllowAll);
 
-            var audience = "http://localhost:4200"; // your Angular app
-            var issuer = "https://localhost:17579"; // your web API
-
+            string audience = WebConfigurationManager.AppSettings["jwt:aud"];
+            string issuer = WebConfigurationManager.AppSettings["jwt:iss"];
             // the key upon wich HMAC signature will be created
-            string key = "some randomly generated cryptographically good number";
+            string key = WebConfigurationManager.AppSettings["jwt:hash_key"];
+            //var audience = "http://localhost:4200"; // your Angular app
+            //var issuer = "https://localhost:17579"; // your web API
+
+            
+            //string key = "some randomly generated cryptographically good number";
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(key);
             var secret = Convert.ToBase64String(bytes);
 
@@ -50,6 +55,8 @@ namespace AspNetIdentityAuthSample
             var signingCredentials = new SigningCredentials(
                 securityKey,
                 SecurityAlgorithms.HmacSha256Signature);
+
+
 
             app.UseJwtBearerAuthentication(
                 new JwtBearerAuthenticationOptions
@@ -68,7 +75,9 @@ namespace AspNetIdentityAuthSample
                         ValidateIssuer = true,
 
                         ValidAudience = audience,
-                        ValidateAudience = true
+                        ValidateAudience = true,
+
+                        ValidateLifetime = true
                     }
                 }
             );

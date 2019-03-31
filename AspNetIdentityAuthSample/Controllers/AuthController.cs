@@ -79,11 +79,8 @@ namespace AspNetIdentityAuthSample.Controllers
 
         private async Task<string> GetToken(string userName, string password)
         {
-            string token;
-
             //_httpClient.DefaultRequestHeaders.Add("Content-Type", "application/x-www-form-urlencoded");
             string tokenEndpoint = "http://" + Request.RequestUri.Authority + "/token";
-
 
             var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
             //request.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
@@ -98,7 +95,7 @@ namespace AspNetIdentityAuthSample.Controllers
 
             HttpResponseMessage tokenResponse = await _httpClient.SendAsync(request);
 
-            token = await tokenResponse.Content.ReadAsStringAsync();
+            string token = await tokenResponse.Content.ReadAsStringAsync();
 
             return token;
         }
