@@ -26,7 +26,7 @@ namespace AspNetIdentityAuthSample
         public void Configuration(IAppBuilder app)
         {
             app.CreatePerOwinContext(() => new IdentityDbContext());
-            //app.CreatePerOwinContext<UserManager<IdentityUser>>(UserManager<IdentityUser>.)
+
             app.CreatePerOwinContext<UserManager<IdentityUser>>((options, context) =>
             {
                 var dbContext = context.Get<IdentityDbContext>();
@@ -61,12 +61,6 @@ namespace AspNetIdentityAuthSample
             app.UseJwtBearerAuthentication(
                 new JwtBearerAuthenticationOptions
                 {
-                    //AuthenticationMode = AuthenticationMode.Active,
-                    //AllowedAudiences = new [] { audience },
-                    //IssuerSecurityKeyProviders = new IIssuerSecurityKeyProvider[]
-                    //{
-                    //    new SymmetricKeyIssuerSecurityKeyProvider(issuer, secret)
-                    //},
                     TokenValidationParameters = new TokenValidationParameters
                     {
                         IssuerSigningKey = signingCredentials.Key,
@@ -141,13 +135,6 @@ namespace AspNetIdentityAuthSample
         {
             context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { "*" });
 
-            //if (context.Password != "123" || context.UserName != "test")
-            //{
-            //    context.SetError("invalid_grant", "The user name or password is incorrect");
-            //    context.Rejected();
-            //    return Task.FromResult<object>(null);
-            //}
-
             var user = context.OwinContext.Get<IdentityDbContext>().Users.FirstOrDefault(u => u.UserName == context.UserName);
             if (!context.OwinContext.Get<UserManager<IdentityUser>>().CheckPassword(user, context.Password))
             {
@@ -155,16 +142,6 @@ namespace AspNetIdentityAuthSample
                 context.Rejected();
                 return;
             }
-
-            //var user = new IdentityUser(context.UserName);
-
-            //var user = context.OwinContext.Get<BooksContext>().Users.FirstOrDefault(u => u.UserName == context.UserName);
-            //if (!context.OwinContext.Get<BookUserManager>().CheckPassword(user, context.Password))
-            //{
-            //    context.SetError("invalid_grant", "The user name or password is incorrect");
-            //    context.Rejected();
-            //    return Task.FromResult<object>(null);
-            //}
 
             ClaimsIdentity claimsIdentity = await SetClaimsIdentity(context, user);
 
@@ -194,12 +171,6 @@ namespace AspNetIdentityAuthSample
                     identity.AddClaim(new Claim(ClaimTypes.Role, role));
                 }
             }
-
-            //var userRoles = context.OwinContext.Get<BookUserManager>().GetRoles(user.Id);
-            //foreach (var role in userRoles)
-            //{
-            //    identity.AddClaim(new Claim(ClaimTypes.Role, role));
-            //}
 
             return identity;
         }
