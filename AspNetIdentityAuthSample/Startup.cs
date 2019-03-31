@@ -45,21 +45,31 @@ namespace AspNetIdentityAuthSample
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(key);
             var secret = Convert.ToBase64String(bytes);
 
+            var now = DateTime.UtcNow;
+            var securityKey = new SymmetricSecurityKey(Encoding.Default.GetBytes(secret));
+            var signingCredentials = new SigningCredentials(
+                securityKey,
+                SecurityAlgorithms.HmacSha256Signature);
+
             app.UseJwtBearerAuthentication(
                 new JwtBearerAuthenticationOptions
                 {
-                    AuthenticationMode = AuthenticationMode.Active,
-                    AllowedAudiences = new [] { audience },
-                    IssuerSecurityKeyProviders = new IIssuerSecurityKeyProvider[]
-                    {
-                        new SymmetricKeyIssuerSecurityKeyProvider(issuer, secret)
-                    },
-
-                    // if needed, configure other options
-                    //TokenValidationParameters = new TokenValidationParameters
+                    //AuthenticationMode = AuthenticationMode.Active,
+                    //AllowedAudiences = new [] { audience },
+                    //IssuerSecurityKeyProviders = new IIssuerSecurityKeyProvider[]
                     //{
-                        
-                    //}
+                    //    new SymmetricKeyIssuerSecurityKeyProvider(issuer, secret)
+                    //},
+                    TokenValidationParameters = new TokenValidationParameters
+                    {
+                        IssuerSigningKey = signingCredentials.Key,
+
+                        ValidIssuer = issuer,
+                        ValidateIssuer = true,
+
+                        ValidAudience = audience,
+                        ValidateAudience = true
+                    }
                 }
             );
 
