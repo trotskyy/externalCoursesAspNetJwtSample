@@ -4,12 +4,15 @@ using Microsoft.AspNet.Identity.EntityFramework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using Microsoft.AspNet.Identity.Owin;
 using System.Threading.Tasks;
-using Microsoft.Owin;
+using System.IdentityModel.Tokens;
+using System.Text;
+using System.Web.Configuration;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace AspNetIdentityAuthSample.Controllers
 {
@@ -47,7 +50,7 @@ namespace AspNetIdentityAuthSample.Controllers
                 return Unauthorized();
             }
 
-            string token = await GetToken(signInModel.Login, signInModel.Password);
+            string token = await IssueToken(user);
 
             return Ok(new { user = "Some user data from domain DB", token });
         }
@@ -85,32 +88,52 @@ namespace AspNetIdentityAuthSample.Controllers
             // create user in Domain DB
             // ...
 
-            string token = await GetToken(signUpModel.Login, signUpModel.Password);
+            string token = await IssueToken(newUser);
 
             return Ok(new { user = "Some user data from domain DB", token });
         }
 
-        private async Task<string> GetToken(string userName, string password)
+        private async Task<string> IssueToken(IdentityUser identityUser)
         {
-            //_httpClient.DefaultRequestHeaders.Add("Content-Type", "application/x-www-form-urlencoded");
-            string tokenEndpoint = "http://" + Request.RequestUri.Authority + "/token";
+            string audience = WebConfigurationManager.AppSettings["jwt:aud"];
+            string issuer = WebConfigurationManager.AppSettings["jwt:iss"];
+            // the key upon wich HMAC signature will be created
+            string key = WebConfigurationManager.AppSettings["jwt:hash_key"];
 
-            var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
-            //request.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+
+            //string key = "some randomly generated cryptographically good number";
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(key);
+            var secret = Convert.ToBase64String(bytes);
+
+            var now = DateTime.UtcNow;
+            var securityKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.Default.GetBytes(secret));
+            var signingCredentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+                securityKey,
+                SecurityAlgorithms.HmacSha256Signature);
+
+            var issuedAt = DateTime.Now.ToUniversalTime();
+            var expiresAt = issuedAt.AddMinutes(5);
+
+            IList<Claim> claims = await UserManager.GetClaimsAsync(identityUser.Id);
+            
+            if (identityUser.Roles.Count > 0)
             {
-                { "username", userName },
-                { "password", password },
-                { "grant_type", "password" },
-            });
-            request.Content.Headers.ContentType
-                = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
+                IList<string> roles = await UserManager.GetRolesAsync(identityUser.Id);
 
-            HttpResponseMessage tokenResponse = await _httpClient.SendAsync(request);
+                foreach (string role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+            }
 
-            string token = await tokenResponse.Content.ReadAsStringAsync();
+            var token = new JwtSecurityToken(issuer, 
+                audience, 
+                claims, 
+                issuedAt,
+                expiresAt, 
+                signingCredentials);
 
-            return token;
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
